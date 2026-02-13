@@ -1,0 +1,79 @@
+.modern-tbank-settings {
+  max-width: 980px;
+  --tbank-accent: #0b6b7a;
+  --tbank-border: #e4e7eb;
+  --tbank-muted: #f6f8fa;
+}
+
+.modern-tbank-settings .modern-tbank-callout {
+  background: linear-gradient(180deg, #f8fbfc 0%, #f2f6f8 100%);
+  border: 1px solid var(--tbank-border);
+  border-left: 4px solid var(--tbank-accent);
+  padding: 14px 16px;
+  margin: 10px 0 18px;
+  border-radius: 10px;
+  color: #1f2933;
+}
+
+.modern-tbank-settings .modern-tbank-callout code {
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--tbank-border);
+}
+
+.modern-tbank-settings .form-table {
+  background: #fff;
+  border: 1px solid var(--tbank-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.modern-tbank-settings h2 {
+  margin-top: 4px;
+}
+
+.modern-tbank-settings .wc-settings-sub-title {
+  background: var(--tbank-muted);
+  border: 1px solid var(--tbank-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 18px 0 8px;
+  font-weight: 600;
+}
+
+.modern-tbank-settings .form-table th {
+  width: 280px;
+}
+
+.modern-tbank-settings .form-table th,
+.modern-tbank-settings .form-table td {
+  padding: 12px;
+}
+
+.modern-tbank-settings .form-table tr:not(:last-child) th,
+.modern-tbank-settings .form-table tr:not(:last-child) td {
+  border-bottom: 1px solid #eef1f4;
+}
+
+.modern-tbank-settings .tbank-receipt-disabled {
+  opacity: 0.55;
+}
+
+.modern-tbank-settings .tbank-receipt-badge {
+  display: inline-block;
+  background: #1f2933;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 2px 9px;
+  margin-left: 6px;
+}
+
+@media (max-width: 782px) {
+  .modern-tbank-settings .form-table th {
+    width: auto;
+  }
+}
