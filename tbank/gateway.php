@@ -437,6 +437,7 @@ class WC_Gateway_Modern_TBank extends WC_Payment_Gateway {
                             ];
                         
                         case 'NEW':
+                        case 'FORM_SHOWED':
                             return [
                                 'result'   => 'success',
                                 'redirect' => $payment_url
