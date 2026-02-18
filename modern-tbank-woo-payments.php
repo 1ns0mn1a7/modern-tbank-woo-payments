@@ -3,7 +3,7 @@
 Plugin Name: Modern TBank Woo Payments
 Author: 1n0mn1a7
 Description: Современный платежный шлюз Т‑Банк для новых версий WooCommerce.
-Version: 1.0.0
+Version: 1.1.0
 */
 
 if (!defined('ABSPATH')) exit;
