@@ -145,6 +145,7 @@ class TBank_Webhook {
 
                 break;
 
+            case 'AUTH_FAIL':
             case 'REJECTED':
             case 'DEADLINE_EXPIRED':
 
@@ -152,6 +153,8 @@ class TBank_Webhook {
                     'failed',
                     'Платеж Т-Банка неуспешен (' . $status . ')'
                 );
+                $order->delete_meta_data('_tbank_payment_id');
+                $order->delete_meta_data('_tbank_payment_url');
                 $order->save();
                 break;
 

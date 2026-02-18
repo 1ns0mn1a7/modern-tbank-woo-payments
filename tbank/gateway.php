@@ -431,22 +431,42 @@ class WC_Gateway_Modern_TBank extends WC_Payment_Gateway {
                         ];
 
                         case 'AUTHORIZED':
-                            return [
-                                'result'   => 'success',
-                                'redirect' => $payment_url ?: $order->get_checkout_payment_url()
-                            ];
-                        
                         case 'NEW':
                         case 'FORM_SHOWED':
+                            if (!empty($payment_url)) {
+                                return [
+                                    'result'   => 'success',
+                                    'redirect' => $payment_url
+                                ];
+                            }
                             return [
                                 'result'   => 'success',
-                                'redirect' => $payment_url
+                                'redirect' => $order->get_checkout_payment_url()
                             ];
+
+                        case 'AUTH_FAIL':
+                            $order->update_status(
+                                'failed',
+                                'Платеж Т-Банка неуспешен (AUTH_FAIL).'
+                            );
+                            $order->delete_meta_data('_tbank_payment_id');
+                            $order->delete_meta_data('_tbank_payment_url');
+                            $order->save();
+                            wc_add_notice('Оплата не прошла. Попробуйте снова или используйте другой способ оплаты.', 'error');
+
+                            if ($this->debug) {
+                                TBank_Helper::log('Payment failed. Status: AUTH_FAIL');
+                            }
+
+                            return null;
                         
                         case 'REJECTED':
                         case 'CANCELED':
                         case 'DEADLINE_EXPIRED':
                             $order->update_status('failed');
+                            $order->delete_meta_data('_tbank_payment_id');
+                            $order->delete_meta_data('_tbank_payment_url');
+                            $order->save();
                             wc_add_notice('Payment failed.', 'error');
 
                             if ($this->debug) {
@@ -458,12 +478,61 @@ class WC_Gateway_Modern_TBank extends WC_Payment_Gateway {
             }
         }
 
+        // If payment link already exists, never create a duplicate payment in T-Bank.
+        if (!empty($payment_url)) {
+            $noted_payment_url = (string) $order->get_meta('_tbank_payment_note_url');
+            if ($noted_payment_url !== (string) $payment_url) {
+                $order->add_order_note('Ссылка на оплату Т-Банк: ' . (string) $payment_url);
+                $order->update_meta_data('_tbank_payment_note_url', (string) $payment_url);
+                $order->save();
+            }
+
+            if ($this->debug) {
+                TBank_Helper::log('Reuse existing payment link for order: ' . $order_id);
+            }
+            return [
+                'result'   => 'success',
+                'redirect' => $payment_url
+            ];
+        }
+
         // New Init
         $request_settings = $this->settings;
         $request_settings['notification_url'] = MODERN_TBANK_URL . 'tbank/success.php';
         $request_settings['payment_form_language'] = $this->payment_form_language;
+        $request_settings['order_id'] = (string) $order_id;
 
         $response = $api->init_payment($order, $request_settings);
+
+        // Edge case: payment exists in T-Bank, but local payment link metadata is empty.
+        // Retry once with a technical bank OrderId suffix to get a fresh payment URL.
+        if (is_wp_error($response) && empty($payment_url)) {
+            $error_data = $response->get_error_data();
+            $api_error_code = is_array($error_data) ? (string) ($error_data['error_code'] ?? '') : '';
+
+            if ($api_error_code === '8') {
+                $retry_attempt = (int) $order->get_meta('_tbank_reinit_attempt') + 1;
+                $retry_order_id = (string) $order_id . '-R' . $retry_attempt;
+
+                if ($this->debug) {
+                    TBank_Helper::log(
+                        'Retry Init with fallback OrderId: ' . $retry_order_id .
+                        ' (original order: ' . $order_id . ')'
+                    );
+                }
+
+                $retry_settings = $request_settings;
+                $retry_settings['order_id'] = $retry_order_id;
+                $retry_response = $api->init_payment($order, $retry_settings);
+
+                if (!is_wp_error($retry_response)) {
+                    $order->update_meta_data('_tbank_reinit_attempt', $retry_attempt);
+                    $response = $retry_response;
+                } else {
+                    $response = $retry_response;
+                }
+            }
+        }
 
         if ($this->debug) {
             if (is_wp_error($response)) {
@@ -485,6 +554,15 @@ class WC_Gateway_Modern_TBank extends WC_Payment_Gateway {
 
         $order->update_meta_data('_tbank_payment_id', $response->PaymentId);
         $order->update_meta_data('_tbank_payment_url', $response->PaymentURL);
+        $order->update_meta_data(
+            '_tbank_bank_order_id',
+            isset($response->OrderId) ? (string) $response->OrderId : (string) $request_settings['order_id']
+        );
+        $noted_payment_url = (string) $order->get_meta('_tbank_payment_note_url');
+        if ($noted_payment_url !== (string) $response->PaymentURL) {
+            $order->add_order_note('Ссылка на оплату Т-Банк: ' . (string) $response->PaymentURL);
+            $order->update_meta_data('_tbank_payment_note_url', (string) $response->PaymentURL);
+        }
         $order->set_transaction_id($response->PaymentId);
         $order->save();
 

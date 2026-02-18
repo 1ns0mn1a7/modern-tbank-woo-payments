@@ -30,10 +30,14 @@ class TBank_API {
             );
         }
 
+        $bank_order_id = isset($settings['order_id']) && $settings['order_id'] !== ''
+            ? (string) $settings['order_id']
+            : (string) $order->get_id();
+
         $data = [
             'TerminalKey' => $this->terminal,
             'Amount'      => $amount,
-            'OrderId'     => (string) $order->get_id(),
+            'OrderId'     => $bank_order_id,
             'Description' => $this->build_description($order),
         ];
 
@@ -192,7 +196,11 @@ class TBank_API {
         if (isset($json->Success) && $json->Success === false) {
             return new WP_Error(
                 'tbank_api_error',
-                $json->Message ?? 'Unknown T-Bank error'
+                $json->Message ?? 'Unknown T-Bank error',
+                [
+                    'error_code' => isset($json->ErrorCode) ? (string) $json->ErrorCode : '',
+                    'details'    => isset($json->Details) ? (string) $json->Details : '',
+                ]
             );
         }
 
